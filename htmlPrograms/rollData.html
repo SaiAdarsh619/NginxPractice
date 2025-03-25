@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    
+    <script>
+    async function Submit(event) {
+        event.preventDefault(); // Prevent default form submission
+
+        const form = document.getElementById('setdata');
+        const formData = new FormData(form);
+
+        // Convert formData to JSON
+        const jsonData = Object.fromEntries(formData.entries());
+        console.log(jsonData);
+        // Parse integer fields
+        if (jsonData.roll) {
+            jsonData.roll = parseInt(jsonData.roll, 10);
+        }
+        console.log(JSON.stringify(jsonData));
+        
+        try {
+            const response = await fetch("{{server_url}}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(jsonData)
+            });
+
+            if (response.ok) {
+                console.log("form submitted");
+                updateTable();
+                // setTimeout(function(){window.location.reload()})
+            } else {
+                const errorText = await response.text();
+                console.log('error: ' + errorText);
+            }
+        } catch (error) {
+            console.error("Network Error:", error);
+        }
+    }
+
+    async function updateTable() {
+
+        const response = await fetch('{{server_url}}updatedata');
+        const jsondata = await response.json();
+        console.log(jsondata);
+
+        const table = document.querySelector('table');
+        const header = table.querySelector('tr:first-child'); // get first row which is the header
+        table.innerHTML = '';
+        table.appendChild(header);
+
+
+
+        jsondata.forEach(student => {
+            const row = table.insertRow(); // Create a new row
+            const nameCell = row.insertCell(0); // Create a new cell for the name
+            const rollCell = row.insertCell(1); // Create a new cell for the roll number
+            const actionCell = row.insertCell(2); // Create a new cell for the action buttons
+
+            nameCell.textContent = student.name; // Set the text content of the name cell
+            rollCell.textContent = student.roll; // Set the text content of the roll cell
+
+            const deleteCell = row.insertCell(2);
+            
+            const deletebutton = document.createElement('button');
+            deletebutton.textContent = 'delete';
+            deletebutton.classList.add('btn', 'btn-secondary');
+            deletebutton.onclick = () =>deletedata(student.roll);
+            deleteCell.appendChild(deletebutton);
+        });
+    }
+
+    async function deletedata(roll) {
+        const table = document.getElementById('clear');
+        console.log(roll);
+        
+        const response = await fetch(`{{server_url}}delete/${roll}`, {method: "DELETE"});
+
+        if(response.ok)
+        {
+            updateTable();   
+        }
+        else
+        {
+            console.log('problem in deletion');
+        }
+
+    }
+    </script>
+</head>
+<body>
+    <table class="table" style="width: 40%;" id="table">
+        <tr class="table-primary">
+            <th>
+                name
+            </th>
+            <th>
+                roll no
+            </th>
+        </tr>
+        {% for i in student %}
+        <tr>
+            <th>{{ i.name }}</th>
+            <th>{{ i.roll }}</th>
+            <th id="delete">
+                <button type="button" class="btn btn-secondary" id="deletebutton" name="delete" onclick="deletedata({{ i.roll }})">delete</button>
+            </th>
+        </tr>
+        {% endfor %}
+    </table>
+    <form class="form-inline" id="setdata" method="POST" onsubmit="Submit(event)" style="margin-top: 20px;">
+        <div class="form-group mb-2">
+            <label for="name" class="sr-only">Name</label>
+            <input type="text" class="form-control" id="name" name="name" placeholder="Name">
+        </div>
+        <div class="form-group mx-sm-3 mb-2">
+            <label for="roll" class="sr-only">Roll No</label>
+            <input type="tel" class="form-control" id="roll" name="roll" placeholder="Roll No">
+        </div>
+        <button type="submit" class="btn btn-primary mb-2">Submit</button>
+    </form>
+</body>
+</html>
